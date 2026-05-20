@@ -1,0 +1,32 @@
+name: Build Projetos
+
+on:
+  workflow_dispatch:
+    inputs:
+      projeto:
+        description: "api ou cronjob"
+        required: true
+        type: choice
+        options:
+          - api
+          - cronjob
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar cron para API
+        if: github.event.inputs.projeto == 'api'
+        run: |
+          sed -i 's/cron.enabled=true/cron.enabled=false/' application.properties
+
+      - name: Configurar cron para CronJob
+        if: github.event.inputs.projeto == 'cronjob'
+        run: |
+          sed -i 's/cron.enabled=false/cron.enabled=true/' application.properties
+
+      - name: Mostrar config final
+        run: cat application.properties
