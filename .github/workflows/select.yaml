@@ -10,6 +10,9 @@ on:
         options:
           - api
           - cronjob
+  push:
+    paths:
+      - '**/*.yaml'
 
 jobs:
   build:
