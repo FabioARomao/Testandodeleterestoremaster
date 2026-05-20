@@ -1,4 +1,4 @@
-name: Build Projetos
+name: Deploy
 
 on:
   workflow_dispatch:
@@ -13,20 +13,39 @@ on:
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/master'
+
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configurar cron para API
-        if: github.event.inputs.projeto == 'api'
-        run: |
-          sed -i 's/cron.enabled=true/cron.enabled=false/' application.properties
+      - name: Mostrar projeto
+        run: echo "Projeto escolhido: ${{ github.event.inputs.projeto }}"
 
-      - name: Configurar cron para CronJob
-        if: github.event.inputs.projeto == 'cronjob'
-        run: |
-          sed -i 's/cron.enabled=false/cron.enabled=true/' application.properties
+jobs:
+  validar:
+    runs-on: ubuntu-latest
 
-      - name: Mostrar config final
-        run: cat application.properties
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detectar projeto
+        id: projeto
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q "projetoa.yaml"; then
+            echo "tipo=projetoa" >> $GITHUB_OUTPUT
+          elif git diff --name-only HEAD~1 HEAD | grep -q "projetob.yaml"; then
+            echo "tipo=projetob" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Alterar arquivo apenas no Projeto A
+        if: steps.projeto.outputs.tipo == 'projetoa'
+        run: |
+          echo "ALTERADO PELO PROJETO A" > config/app.txt
+
+      - name: Não alterar no Projeto B
+        if: steps.projeto.outputs.tipo == 'projetob'
+        run: |
+          echo "Projeto B não altera arquivo"
