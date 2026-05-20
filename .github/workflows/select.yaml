@@ -18,15 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: API desativa cron
+      - name: Desativar cron para API
         if: github.event.inputs.projeto == 'api'
         run: |
-          sed -i 's/cron.enabled=true/cron.enabled=false/' application.properties
+          sed -i 's/^*/# */' crontab/crontab_prod
 
-      - name: Cronjob ativa cron
+      - name: Ativar cron para CronJob
         if: github.event.inputs.projeto == 'cronjob'
         run: |
-          sed -i 's/cron.enabled=false/cron.enabled=true/' application.properties
+          sed -i 's/^# //' crontab/crontab_prod
 
       - name: Mostrar resultado
-        run: cat application.properties
+        run: cat crontab/crontab_prod
