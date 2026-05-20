@@ -10,45 +10,23 @@ on:
         options:
           - api
           - cronjob
-  push:
-    paths:
-      - '**/*.yaml'
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/master'
-
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Mostrar projeto
-        run: echo "Projeto escolhido: ${{ github.event.inputs.projeto }}"
-
-jobs:
-  validar:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Detectar projeto
-        id: projeto
+      - name: API desativa cron
+        if: github.event.inputs.projeto == 'api'
         run: |
-          if git diff --name-only HEAD~1 HEAD | grep -q "projetoa.yaml"; then
-            echo "tipo=projetoa" >> $GITHUB_OUTPUT
-          elif git diff --name-only HEAD~1 HEAD | grep -q "projetob.yaml"; then
-            echo "tipo=projetob" >> $GITHUB_OUTPUT
-          fi
+          sed -i 's/cron.enabled=true/cron.enabled=false/' application.properties
 
-      - name: Alterar arquivo apenas no Projeto A
-        if: steps.projeto.outputs.tipo == 'projetoa'
+      - name: Cronjob ativa cron
+        if: github.event.inputs.projeto == 'cronjob'
         run: |
-          echo "ALTERADO PELO PROJETO A" > config/app.txt
+          sed -i 's/cron.enabled=false/cron.enabled=true/' application.properties
 
-      - name: Não alterar no Projeto B
-        if: steps.projeto.outputs.tipo == 'projetob'
-        run: |
-          echo "Projeto B não altera arquivo"
+      - name: Mostrar resultado
+        run: cat application.properties
