@@ -21,12 +21,14 @@ jobs:
       - name: Desativar cron para API
         if: github.event.inputs.projeto == 'api'
         run: |
-          sed -i 's/^*/# */' crontab/crontab_prod
+          sed -i 's|^\(\*/5 \* \* \* \* php artisan schedule:run\)|# \1|' crontab/crontab_prod
 
       - name: Ativar cron para CronJob
         if: github.event.inputs.projeto == 'cronjob'
         run: |
-          sed -i 's/^# //' crontab/crontab_prod
+          sed -i 's|^# \(.*php artisan schedule:run.*\)|\1|' crontab/crontab_prod
 
       - name: Mostrar resultado
-        run: cat crontab/crontab_prod
+        run: |
+          echo "Projeto: ${{ github.event.inputs.projeto }}"
+          cat crontab/crontab_prod
