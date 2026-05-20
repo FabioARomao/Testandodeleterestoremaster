@@ -4,31 +4,50 @@ on:
   workflow_dispatch:
     inputs:
       projeto:
-        description: "api ou cronjob"
+        description: "Nome do projeto"
         required: true
         type: choice
         options:
-          - api
-          - cronjob
-
+          - projeto-a
+          - projeto-b
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      API_PROJECTS: "projeto-a"
+      JOB_PROJECTS: "projeto-b"
+
     steps:
       - uses: actions/checkout@v4
 
+      - name: Identificar tipo do projeto
+        id: tipo
+        run: |
+          PROJETO="${{ github.event.inputs.projeto }}"
+
+          if [[ " $API_PROJECTS " =~ " $PROJETO " ]]; then
+            echo "tipo=api" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ " $JOB_PROJECTS " =~ " $PROJETO " ]]; then
+            echo "tipo=cronjob" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Mostrar tipo
+        run: |
+          echo "Projeto: ${{ github.event.inputs.projeto }}"
+          echo "Tipo: ${{ steps.tipo.outputs.tipo }}"
+
       - name: Desativar cron para API
-        if: github.event.inputs.projeto == 'api'
+        if: steps.tipo.outputs.tipo == 'api'
         run: |
           sed -i 's|^\(\*/5 \* \* \* \* php artisan schedule:run\)|# \1|' crontab/crontab_prod
 
       - name: Ativar cron para CronJob
-        if: github.event.inputs.projeto == 'cronjob'
+        if: steps.tipo.outputs.tipo == 'cronjob'
         run: |
           sed -i 's|^# \(.*php artisan schedule:run.*\)|\1|' crontab/crontab_prod
 
-      - name: Mostrar resultado
-        run: |
-          echo "Projeto: ${{ github.event.inputs.projeto }}"
-          cat crontab/crontab_prod
+      - name: Mostrar crontab final
+        run: cat crontab/crontab_prod
