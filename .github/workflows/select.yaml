@@ -2,52 +2,47 @@ name: Deploy
 
 on:
   workflow_dispatch:
-    inputs:
-      projeto:
-        description: "Nome do projeto"
-        required: true
-        type: choice
-        options:
-          - projeto-a
-          - projeto-b
+
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
-    env:
-      API_PROJECTS: "projeto-a"
-      JOB_PROJECTS: "projeto-b"
+    strategy:
+      matrix:
+        include:
+          - projeto: projeto-api
+            tipo: api
+            cron_enabled: false
+
+          - projeto: projeto-job
+            tipo: cronjob
+            cron_enabled: true
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Identificar tipo do projeto
-        id: tipo
+      - name: Mostrar projeto
         run: |
-          PROJETO="${{ github.event.inputs.projeto }}"
-
-          if [[ " $API_PROJECTS " =~ " $PROJETO " ]]; then
-            echo "tipo=api" >> $GITHUB_OUTPUT
-          fi
-
-          if [[ " $JOB_PROJECTS " =~ " $PROJETO " ]]; then
-            echo "tipo=cronjob" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Mostrar tipo
-        run: |
-          echo "Projeto: ${{ github.event.inputs.projeto }}"
-          echo "Tipo: ${{ steps.tipo.outputs.tipo }}"
+          echo "Projeto: ${{ matrix.projeto }}"
+          echo "Tipo: ${{ matrix.tipo }}"
 
       - name: Desativar cron para API
-        if: steps.tipo.outputs.tipo == 'api'
+        if: matrix.cron_enabled == false
         run: |
           sed -i 's|^\(\*/5 \* \* \* \* php artisan schedule:run\)|# \1|' crontab/crontab_prod
 
-      - name: Ativar cron para CronJob
-        if: steps.tipo.outputs.tipo == 'cronjob'
+      - name: Ativar cron para Job
+        if: matrix.cron_enabled == true
         run: |
           sed -i 's|^# \(.*php artisan schedule:run.*\)|\1|' crontab/crontab_prod
 
       - name: Mostrar crontab final
         run: cat crontab/crontab_prod
+
+      - name: Build docker
+        run: |
+          docker build -t ${{ matrix.projeto }} .
+
+      - name: Deploy
+        run: |
+          echo "Deploy do projeto ${{ matrix.projeto }}"
