@@ -18,7 +18,7 @@ jobs:
           REPO_NAME: ${{ github.event.inputs.repo_name }}
         run: |
           # 1. Cria o repositório remoto como privado (--private)
-          gh repo create "$REPO_NAME" --private
+          gh repo create "$REPO_NAME" --private --confirm
           
           # 2. Inicializa o repositório local diretamente na branch develop
           mkdir "$REPO_NAME" && cd "$REPO_NAME"
@@ -59,14 +59,14 @@ jobs:
           # 6. Faz o commit inicial e o push da branch develop
           git add .
           git commit -m "chore: inicializacao do repositorio na branch develop"
-          git remote add origin "https://github.com{{ github.repository_owner }}/$REPO_NAME.git"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository_owner }}/$REPO_NAME.git"
           
           # Como develop e a primeira branch a subir, o GitHub a define automaticamente como default
-          git push -u origin develop
+          git push --set-upstream origin develop
 
       - name: Criar Ruleset Preventivo para a Master
         env:
-          GH_TOKEN: ${{ secrets.PAT_COM_PERMISSOES }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           REPO_NAME: ${{ github.event.inputs.repo_name }}
         run: |
           # 7. Cria a estrutura JSON do Ruleset para proteger a futura branch master
