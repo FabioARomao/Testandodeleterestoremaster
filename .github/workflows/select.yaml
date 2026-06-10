@@ -30,16 +30,8 @@ jobs:
           # 3. Cria o arquivo README.md
           echo "# $REPO_NAME" > README.md
           echo "Este repositório privado foi criado via GitHub Actions." >> README.md
-
-          # 4. Cria o arquivo inputs.yml
-          echo "# $REPO_NAME" > inputs.yml
-          cat << 'EOF' > inputs.yml
-          SKIP_BUILD: false
-          CONFIGMAP_DEPLOY: false
-          SECRETS_DEPLOY: false
-          REPLICAS: 1
           
-          # 5. Cria a pasta .github/workflows e o arquivo develop.yaml
+          # 4. Cria a pasta .github/workflows e o arquivo develop.yaml
           mkdir -p .github/workflows
           cat << 'EOF' > .github/workflows/develop.yaml
           name: CI Develop
@@ -66,6 +58,16 @@ jobs:
                   
                 - name: Executar Testes
                   run: echo "Executando os testes automatizados na branch develop..."
+          EOF
+
+          # 5. Cria o arquivo inputs.yml
+          echo "# $REPO_NAME" > inputs.yml
+          cat << 'EOF' > inputs.yml
+          SKIP_BUILD: false
+          CONFIGMAP_DEPLOY: false
+          SECRETS_DEPLOY: false
+          REPLICAS: 1
+          
           EOF
           
           # 6. Configura a identidade do Git Bot
