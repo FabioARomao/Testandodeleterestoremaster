@@ -1,48 +1,108 @@
-name: Deploy
+name: Criar Repositorio Privado com Branch Develop
 
 on:
   workflow_dispatch:
+    inputs:
+      repo_name:
+        description: 'Nome do novo repositorio'
+        required: true
+        type: string
 
 jobs:
-  deploy:
+  configurar_repositorio:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        include:
-          - projeto: projeto-api
-            tipo: api
-            cron_enabled: false
-
-          - projeto: projeto-job
-            tipo: cronjob
-            cron_enabled: true
-
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Mostrar projeto
+      - name: Criar Estrutura e Push na Branch Develop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_NAME: ${{ github.event.inputs.repo_name }}
         run: |
-          echo "Projeto: ${{ matrix.projeto }}"
-          echo "Tipo: ${{ matrix.tipo }}"
+          # 1. Cria o repositório remoto como privado (--private)
+          gh repo create "$REPO_NAME" --private
+          
+          # 2. Inicializa o repositório local diretamente na branch develop
+          mkdir "$REPO_NAME" && cd "$REPO_NAME"
+          git init -b develop
+          
+          # 3. Cria o arquivo README.md
+          echo "# $REPO_NAME" > README.md
+          echo "Este repositório privado foi criado via GitHub Actions." >> README.md
+          
+          # 4. Cria a pasta .github/workflows e o arquivo develop.yaml
+          mkdir -p .github/workflows
+          cat << 'EOF' > .github/workflows/develop.yaml
+          name: CI Develop
+          
+          on:
+            push:
+              branches:
+                - develop
+            pull_request:
+              branches:
+                - develop
+          
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              steps:
+                - name: Checkout do codigo
+                  uses: actions/checkout@v4
+                  
+                - name: Executar Testes
+                  run: echo "Executando os testes automatizados na branch develop..."
+          EOF
+          
+          # 5. Configura a identidade do Git Bot
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@://github.com"
+          
+          # 6. Faz o commit inicial e o push da branch develop
+          git add .
+          git commit -m "chore: inicializacao do repositorio na branch develop"
+          git remote add origin "https://github.com{{ github.repository_owner }}/$REPO_NAME.git"
+          
+          # Como develop e a primeira branch a subir, o GitHub a define automaticamente como default
+          git push -u origin develop
 
-      - name: Desativar cron para API
-        if: matrix.cron_enabled == false
+      - name: Criar Ruleset Preventivo para a Master
+        env:
+          GH_TOKEN: ${{ secrets.PAT_COM_PERMISSOES }}
+          REPO_NAME: ${{ github.event.inputs.repo_name }}
         run: |
-          sed -i 's|^\(\*/5 \* \* \* \* php artisan schedule:run\)|# \1|' crontab/crontab_prod
+          # 7. Cria a estrutura JSON do Ruleset para proteger a futura branch master
+          cat << 'EOF' > ruleset.json
+          {
+            "name": "Protecao da Master via Actions",
+            "target": "branch",
+            "enforcement": "active",
+            "conditions": {
+              "ref_name": {
+                "include": [
+                  "refs/heads/master"
+                ],
+                "exclude": []
+              }
+            },
+            "rules": [
+              {
+                "type": "deletion"
+              },
+              {
+                "type": "non_fast_forward"
+              },
+              {
+                "type": "pull_request",
+                "parameters": {
+                  "required_approving_review_count": 1,
+                  "dismiss_stale_reviews_on_push": true,
+                  "require_code_owner_review": false,
+                  "require_last_push_approval": false,
+                  "required_review_thread_resolution": false
+                }
+              }
+            ]
+          }
+          EOF
 
-      - name: Ativar cron para Job
-        if: matrix.cron_enabled == true
-        run: |
-          sed -i 's|^# \(.*php artisan schedule:run.*\)|\1|' crontab/crontab_prod
-
-      - name: Mostrar crontab final
-        run: cat crontab/crontab_prod
-
-      - name: Build docker
-        run: |
-          docker build -t ${{ matrix.projeto }} .
-
-      - name: Deploy
-        run: |
-          echo "Deploy do projeto ${{ matrix.projeto }}"
+          # 8. Aplica o Ruleset no repositório dinâmico via API
+          gh api repos/${{ github.repository_owner }}/"$REPO_NAME"/rulesets --input ruleset.json
