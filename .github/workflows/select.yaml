@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Criar Estrutura e Push na Branch Develop
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           REPO_NAME: ${{ github.event.inputs.repo_name }}
         run: |
           # 1. Cria o repositório remoto como privado (--private)
