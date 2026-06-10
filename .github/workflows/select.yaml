@@ -30,8 +30,16 @@ jobs:
           # 3. Cria o arquivo README.md
           echo "# $REPO_NAME" > README.md
           echo "Este repositório privado foi criado via GitHub Actions." >> README.md
+
+          # 4. Cria o arquivo inputs.yml
+          echo "# $REPO_NAME" > inputs.yml
+          cat << 'EOF' > inputs.yml
+          SKIP_BUILD: false
+          CONFIGMAP_DEPLOY: false
+          SECRETS_DEPLOY: false
+          REPLICAS: 1
           
-          # 4. Cria a pasta .github/workflows e o arquivo develop.yaml
+          # 5. Cria a pasta .github/workflows e o arquivo develop.yaml
           mkdir -p .github/workflows
           cat << 'EOF' > .github/workflows/develop.yaml
           name: CI Develop
@@ -40,11 +48,16 @@ jobs:
             push:
               branches:
                 - develop
-            pull_request:
-              branches:
-                - develop
           
           jobs:
+            CallTemplate:
+              uses: ""
+              with: ""
+                project: ""
+                dockefile: ""
+                environment: ""
+              secrets: inherit
+
             build:
               runs-on: ubuntu-latest
               steps:
@@ -55,11 +68,11 @@ jobs:
                   run: echo "Executando os testes automatizados na branch develop..."
           EOF
           
-          # 5. Configura a identidade do Git Bot
+          # 6. Configura a identidade do Git Bot
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@://github.com"
           
-          # 6. Faz o commit inicial e o push da branch develop
+          # 7. Faz o commit inicial e o push da branch develop
           git add .
           git commit -m "chore: inicializacao do repositorio na branch develop"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository_owner }}/$REPO_NAME.git"
